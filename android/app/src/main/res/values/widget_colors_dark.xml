@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="wd_bg">#18212A</color>
+    <color name="wd_ink">#E6EDF3</color>
+    <color name="wd_muted">#93A1AE</color>
+    <color name="wd_line">#2A3642</color>
+    <color name="wd_accent">#5FA8DC</color>
+    <color name="wd_on_accent">#0B1620</color>
+    <color name="wd_good">#4CC38A</color>
+    <color name="wd_warn">#E2A336</color>
+    <color name="wd_bad">#F2786D</color>
+    <color name="wd_tab_off">#0F151B</color>
+</resources>

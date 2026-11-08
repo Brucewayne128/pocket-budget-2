@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_bg">#FFFFFF</color>
+    <color name="w_ink">#15212C</color>
+    <color name="w_muted">#5D6B78</color>
+    <color name="w_line">#D9DFE5</color>
+    <color name="w_accent">#1F5F8B</color>
+    <color name="w_on_accent">#FFFFFF</color>
+    <color name="w_good">#1D7A4F</color>
+    <color name="w_warn">#B26A00</color>
+    <color name="w_bad">#B3261E</color>
+    <color name="w_tab_off">#EEF1F4</color>
+</resources>

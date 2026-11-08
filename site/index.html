@@ -1,0 +1,1173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5f8b">
+<title>Pocket Budget</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pocket Budget">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<script>try{var t=localStorage.getItem("pb2_theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-width column — money left and the two totals first, then add, bills checklist, category budgets, ledger, iPhone pairing. */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --ink:#15212c; --muted:#5d6b78; --line:#d9dfe5;
+  --accent:#1f5f8b; --accent-ink:#ffffff; --good:#1d7a4f; --warn:#b26a00; --bad:#b3261e;
+  --gas:#c98a12; --food:#2e8b57; --disp:#7b4fc4; --bills:#2f6fbf; --other:#7a8792;
+  --c5:#178a8a; --c6:#c2456b; --c7:#8a5a2b; --c8:#4b57c9;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151b; --surface:#18212a; --ink:#e6edf3; --muted:#93a1ae; --line:#2a3642;
+  --accent:#5fa8dc; --accent-ink:#0b1620; --good:#4cc38a; --warn:#e2a336; --bad:#f2786d;
+  --gas:#e0a63a; --food:#55b886; --disp:#a685e8; --bills:#6c9fe0; --other:#94a2ae; --c5:#3fbfbf; --c6:#ef7d9f; --c7:#c99a68; --c8:#8a95f0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151b; --surface:#18212a; --ink:#e6edf3; --muted:#93a1ae; --line:#2a3642;
+  --accent:#5fa8dc; --accent-ink:#0b1620; --good:#4cc38a; --warn:#e2a336; --bad:#f2786d;
+  --gas:#e0a63a; --food:#55b886; --disp:#a685e8; --bills:#6c9fe0; --other:#94a2ae; --c5:#3fbfbf; --c6:#ef7d9f; --c7:#c99a68; --c8:#8a95f0; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{--top-inset:max(env(safe-area-inset-top,0px),var(--sat,0px));--bottom-inset:max(env(safe-area-inset-bottom,0px),var(--sab,0px));padding-top:var(--top-inset);padding-bottom:var(--bottom-inset);background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:var(--top-inset);z-index:10;background:var(--bg)}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.num{font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:800;font-size:1.35rem;margin:0;letter-spacing:-.01em}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.live.on .dot{background:var(--good);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 60%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+@media (prefers-reduced-motion:reduce){.live.on .dot{animation:none}}
+
+.month{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.month h2{font-family:var(--display);font-weight:600;font-size:1.05rem;margin:0}
+.iconbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:1.1rem;line-height:1}
+
+.label{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.hero{background:var(--surface);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--line)}
+.big{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,12vw,3.4rem);line-height:1;letter-spacing:-.02em;margin:4px 0 0}
+.big.over{color:var(--bad)}
+.sub{color:var(--muted);font-size:.95rem}
+.totals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tot{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tot b{font-family:var(--display);font-size:1.45rem;font-weight:800;line-height:1.1}
+.tot small{color:var(--muted);font-size:.82rem}
+.track{height:8px;border-radius:4px;background:color-mix(in srgb,var(--ink) 9%,transparent);overflow:hidden}
+.track.thick{height:12px;border-radius:6px}
+.track span{display:block;height:100%;border-radius:inherit;transition:width .4s ease}
+.track span.over{background:var(--bad) !important}
+@media (prefers-reduced-motion:reduce){.track span{transition:none}}
+.stats{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.92rem;color:var(--muted)}
+.stats b{color:var(--ink)}
+
+.card{background:var(--surface);border-radius:var(--r);padding:18px;border:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.card h3{font-family:var(--display);font-weight:600;font-size:1.05rem;margin:0}
+.cardhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cardhead span{color:var(--muted);font-size:.9rem}
+
+.bills{display:flex;flex-direction:column}
+.bill{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.bill:last-child{border-bottom:0}
+.bill input{width:24px;height:24px;accent-color:var(--bills);margin:0;cursor:pointer}
+.bill .bn{font-weight:600}
+.bill .bs{display:block;font-size:.8rem;color:var(--muted);font-weight:500}
+.bill.paid .bs{color:var(--good)}
+.bill .ba{font-weight:700}
+.bill.paid .ba{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+
+.budgets{display:flex;flex-direction:column;gap:16px}
+.bud{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:baseline}
+.bud .name{display:flex;align-items:center;gap:8px;font-weight:600}
+.bud .name i{width:10px;height:10px;border-radius:3px}
+.bud .amt{font-weight:700}
+.bud .amt small{color:var(--muted);font-weight:500}
+.bud .track{grid-column:1/-1}
+.bud .note{grid-column:1/-1;font-size:.82rem;color:var(--muted)}
+.bud .note.over{color:var(--bad);font-weight:600}
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.field .flabel{font-size:.8rem;font-weight:600;color:var(--muted)}
+input[type=text],input[type=date],input[inputmode]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:1rem}
+.amount{font-size:1.6rem !important;font-weight:700;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.92rem;display:inline-flex;align-items:center;gap:7px}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2>*{min-width:0}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:13px 18px;font-weight:700;cursor:pointer;font-size:1rem}
+.primary:disabled{opacity:.5;cursor:default}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600}
+.msg{font-size:.88rem;min-height:1.2em;color:var(--muted)}
+.msg.err{color:var(--bad)}
+
+.day{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding-top:6px}
+.items{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .sw{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:.8rem;color:#fff}
+.item .t{min-width:0}
+.item .t b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t small{color:var(--muted)}
+.item .a{font-weight:700}
+.del{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:8px;font-size:.85rem}
+.del.confirm{color:var(--bad);font-weight:700;background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.empty{color:var(--muted);font-size:.95rem;padding:6px 0}
+.notice{background:color-mix(in srgb,var(--warn) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:var(--r);padding:14px 16px;font-size:.95rem}
+
+.editbtn{margin-left:auto;background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:.85rem;cursor:pointer;color:var(--accent)}
+.cardhead span+.editbtn{margin-left:0}
+.cardhead{align-items:center}
+.cardhead h3{margin-right:auto}
+.editor{display:flex;flex-direction:column;gap:10px;background:var(--bg);border-radius:12px;padding:12px}
+.erow{display:grid;grid-template-columns:minmax(0,1fr) 7.5rem auto;gap:8px;align-items:center}
+.erow input{background:var(--surface) !important;padding:10px 12px !important}
+.erow .fixed{font-weight:600;padding-left:4px}
+.ehead{display:grid;grid-template-columns:minmax(0,1fr) 7.5rem auto;gap:8px;font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.ehead span:last-child{width:36px}
+.rm{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--bad);cursor:pointer;font-size:1.1rem;line-height:1}
+.rm:disabled{visibility:hidden}
+.eactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.eactions .primary{padding:10px 16px}
+.addrow{background:transparent;border:1.5px dashed var(--line);border-radius:10px;padding:10px;font-weight:600;cursor:pointer;color:var(--accent)}
+.emsg{font-size:.85rem;color:var(--bad);min-height:1em}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;position:sticky;top:var(--top-inset);z-index:5}
+.tab{border:0;background:transparent;border-radius:9px;padding:10px 8px;font-weight:700;cursor:pointer;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.pager{display:flex;gap:16px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;align-items:flex-start;scrollbar-width:none;overscroll-behavior-x:contain;transition:height .25s ease}
+.pager::-webkit-scrollbar{display:none}
+@media (prefers-reduced-motion:reduce){.pager{transition:none;scroll-behavior:auto}}
+.pane{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;gap:18px}
+.hint{margin:0;text-align:center;color:var(--muted);font-size:.85rem}
+.pair{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+@media (max-width:380px){.pair{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.qr{background:#ffffff;padding:10px;border-radius:12px;border:1px solid var(--line);width:164px;height:164px;display:grid;place-items:center}
+.qr canvas,.qr img{display:block;width:144px !important;height:144px !important}
+.pair ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+.pair p{margin:0 0 6px;color:var(--muted);font-size:.88rem}
+
+.viewbanner{display:none;background:color-mix(in srgb,var(--accent) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);color:var(--ink);border-radius:12px;padding:10px 14px;font-weight:600;font-size:.92rem;text-align:center}
+.linkbox{background:var(--bg);border-radius:10px;padding:10px 12px;font-size:.85rem;word-break:break-all;user-select:all;color:var(--muted)}
+.qr{width:200px;height:200px}.qr canvas,.qr img{width:180px !important;height:180px !important}
+#landing{display:none}
+.homehint{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:.95rem;line-height:1.4}
+.homehint b{display:block;margin-bottom:4px}
+.homehint .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.homehint button{border:0;border-radius:10px;padding:8px 14px;font:inherit;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.homehint button.later{background:transparent;color:var(--muted)}
+body[data-mode="viewer"] .viewbanner{display:block}
+body[data-mode="viewer"] #addForm,body[data-mode="viewer"] .editbtn,body[data-mode="viewer"] .editor,body[data-mode="viewer"] #shareCard{display:none !important}
+body[data-mode="landing"] .wrap>*:not(header):not(#landing){display:none !important}
+body[data-mode="landing"] #landing{display:flex}
+body[data-mode="landing"] .live{visibility:hidden}
+body[data-mode="landing"] .graphbtn{display:none}
+
+.hdr-right{display:flex;align-items:center;gap:12px}
+.themebtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.themebtn .i-sun{display:none}
+.is-dark .themebtn .i-sun{display:block}
+.is-dark .themebtn .i-moon{display:none}
+
+.collhead{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:transparent;border:0;padding:0;cursor:pointer;text-align:left;color:var(--ink)}
+.collhead .chev{flex:none;width:36px;height:36px;padding:7px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--accent);transition:transform .3s ease}
+.collhead[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.collbody{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease,margin-top .3s ease;margin-top:-12px}
+.collbody.open{grid-template-rows:1fr;margin-top:0}
+.collinner{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:12px}
+@media (prefers-reduced-motion:reduce){.collhead .chev,.collbody{transition:none}}
+
+.refreshbtn{display:none}
+body[data-mode="viewer"] .refreshbtn{display:grid}
+.refreshbtn.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.refreshbtn.spin svg{animation:none}}
+.updated{font-size:.82rem;color:var(--muted);text-align:center}
+
+.scope{border:0;margin:0;padding:10px 12px;border-radius:10px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.scope legend{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:0;margin-bottom:6px;float:left;width:100%}
+.scope label{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.scope input{width:20px;height:20px;accent-color:var(--accent);margin:0}
+
+.graphbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+body.yearmode .wrap>*:not(header):not(#yearPage):not(.viewbanner):not(.notice){display:none !important}
+.yearpage{display:flex;flex-direction:column;gap:18px}
+.charttabs{grid-template-columns:1fr 1fr 1fr;position:static}
+.chartbox{position:relative;width:100%}
+.chartbox svg{display:block;width:100%;height:auto;overflow:visible}
+.chartbox .gridl{stroke:var(--line);stroke-width:1}
+.chartbox .axt{fill:var(--muted);font-size:10px;font-family:var(--body)}
+.chartbox .axt.cur{fill:var(--ink);font-weight:700}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 9px;font-size:.8rem;line-height:1.3;white-space:nowrap;transform:translate(-50%,-100%);margin-top:-8px;z-index:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.legend i.dash{height:0;border-top:2px dashed var(--muted);border-radius:0;width:16px}
+.legend i.ln{height:3px;border-radius:2px}
+.pielist{display:flex;flex-direction:column;gap:8px;width:100%}
+.pierow{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;font-size:.92rem}
+.pierow i{width:12px;height:12px;border-radius:3px}
+.pierow b{font-weight:700}
+.pierow small{color:var(--muted);min-width:3.2em;text-align:right}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fact{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fact b{font-family:var(--display);font-size:1.25rem;font-weight:800}
+.fact small{color:var(--muted);font-size:.82rem}
+.fact.wide{grid-column:1/-1}
+.mtable{display:flex;flex-direction:column}
+.mrow{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem;align-items:baseline}
+.mrow:last-child{border-bottom:0}
+.mrow small{color:var(--muted)}
+.mrow .over{color:var(--bad);font-weight:600}
+.backbtn{align-self:center}
+
+header{flex-wrap:nowrap}
+header h1{font-size:clamp(1.05rem,5.2vw,1.35rem);white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.hdr-right{gap:8px;flex:none}
+.hdr-right .themebtn{width:36px;height:36px}
+@media (max-width:400px){.live{font-size:.7rem;letter-spacing:.03em}}
+
+.erow.withdue,.ehead.withdue{grid-template-columns:minmax(0,1fr) 5.6rem 3.4rem auto}
+.erow.withdue input[data-f="due"]{text-align:center;padding:10px 6px !important}
+.bill .due{display:inline-block;margin-left:6px;font-size:.78rem;font-weight:600;color:var(--muted);padding:1px 7px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+.bill .cd{font-weight:600;color:var(--ink)}
+.bill .cd.soon{color:var(--warn)}
+.bill .cd.late{color:var(--bad)}
+
+.incomebtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+body.incomemode .wrap>*:not(header):not(#incomePage):not(.viewbanner):not(.notice){display:none !important}
+.bill.dep{cursor:default}
+.depicon{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:.85rem;background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.bill .cd.got{color:var(--good)}
+.ledger{display:flex;flex-direction:column}
+.lrow{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.lrow:last-child{border-bottom:0}
+.lrow span{font-weight:600}
+.lrow b{font-weight:700}
+.lrow small{grid-column:1/-1;color:var(--muted);font-size:.82rem}
+.lrow .plus{color:var(--good)}
+.lrow.total{border-top:2px solid var(--line)}
+.lrow.left{padding-top:14px}
+.lrow.left span{font-family:var(--display);font-size:1.1rem}
+.lrow.left b{font-family:var(--display);font-size:1.7rem;font-weight:800}
+.lrow.left b.neg{color:var(--bad)}
+
+
+body[data-mode="viewer"] header h1{font-size:clamp(.98rem,4.7vw,1.35rem)}
+body[data-mode="viewer"] .hdr-right{gap:6px}
+body[data-mode="viewer"] .hdr-right .themebtn{width:34px;height:34px}
+@media (max-width:370px){body[data-mode="viewer"] header h1{font-size:.9rem}body[data-mode="viewer"] .hdr-right{gap:4px}}
+
+.foldrow{display:flex;align-items:flex-start;gap:12px}
+.foldrow>:first-child{flex:1;min-width:0}
+.foldbtn{flex:none;width:36px;height:36px;padding:6px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--accent);cursor:pointer;display:grid;place-items:center;margin-left:4px}
+.foldbtn svg{transition:transform .3s ease}
+.foldbtn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.cardhead>.foldbtn{margin-left:auto}
+.cardhead>.editbtn+.foldbtn,.cardhead>span+.foldbtn{margin-left:4px}
+@media (prefers-reduced-motion:reduce){.foldbtn svg{transition:none}}
+
+.cardhead.hasfold{flex-wrap:nowrap;align-items:center}
+.titlestack{display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0}
+.titlestack h3{margin:0}
+.titlestack span{font-size:.85rem;color:var(--muted)}
+.cardhead.hasfold .editbtn{flex:none}
+
+.saveedit{display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:12px;padding:12px}
+.saveedit label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.saveedit input{background:var(--surface) !important;font-size:1.3rem !important;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Pocket Budget</h1>
+    <div class="hdr-right">
+      <button type="button" class="themebtn incomebtn" id="incomeBtn" aria-label="Open the income page" aria-pressed="false" title="Income">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v18M16.5 7.5c-.8-1.3-2.4-2-4.5-2-2.6 0-4.3 1.3-4.3 3.1 0 4.4 9 2.4 9 6.9 0 1.9-1.9 3.2-4.7 3.2-2.3 0-4-.8-4.8-2.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button type="button" class="themebtn graphbtn" id="graphBtn" aria-label="Open the year graph" aria-pressed="false" title="Year graph">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5.5" y="11" width="3" height="7" rx="1" fill="currentColor"/><rect x="10.5" y="6" width="3" height="12" rx="1" fill="currentColor"/><rect x="15.5" y="13" width="3" height="5" rx="1" fill="currentColor"/></svg>
+      </button>
+      <span class="live" id="live"><span class="dot"></span><span id="liveText">Connecting</span></span>
+      <button type="button" class="themebtn refreshbtn" id="refreshBtn" aria-label="Refresh" title="Refresh">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button type="button" class="themebtn" id="themeBtn" aria-label="Switch to dark mode">
+        <svg class="i-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M20.7 14.6A8.5 8.5 0 0 1 9.4 3.3a.7.7 0 0 0-.9-.9A9.9 9.9 0 1 0 21.6 15.5a.7.7 0 0 0-.9-.9z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="viewbanner" id="viewBanner">View only · updates live from the owner's phone</div>
+  <div class="updated" id="updatedAt" hidden></div>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="month">
+    <button class="iconbtn" id="prev" aria-label="Previous month">‹</button>
+    <h2 id="monthName">This month</h2>
+    <button class="iconbtn" id="next" aria-label="Next month">›</button>
+  </div>
+
+  <section class="hero" aria-live="polite">
+    <div>
+      <div class="label" id="leftLabel">Left this month</div>
+      <p class="big num" id="left">$0.00</p>
+      <div class="sub num" id="ofBudget"></div>
+    </div>
+    <div class="track thick"><span id="totalBar" style="background:var(--accent)"></span></div>
+    <div class="totals">
+      <div class="tot">
+        <span class="label">Bills paid</span>
+        <b class="num" id="billsTotal">$0.00</b>
+        <small class="num" id="billsOf"></small>
+        <div class="track"><span id="billsBar" style="background:var(--bills)"></span></div>
+      </div>
+      <div class="tot">
+        <span class="label">Everything else</span>
+        <b class="num" id="otherTotal">$0.00</b>
+        <small class="num" id="otherOf"></small>
+        <div class="track"><span id="otherBar" style="background:var(--food)"></span></div>
+      </div>
+    </div>
+    <div class="stats num" id="stats"></div>
+  </section>
+
+  <div class="tabs" role="tablist" aria-label="Pages">
+    <button class="tab" role="tab" id="tab-0" data-page="0" aria-selected="true">Bills</button>
+    <button class="tab" role="tab" id="tab-1" data-page="1" aria-selected="false">Everything else</button>
+  </div>
+
+  <div class="pager" id="pager">
+  <div class="pane" id="pane-0" role="tabpanel" aria-labelledby="tab-0">
+  <section class="card">
+    <div class="cardhead"><h3>Monthly bills</h3><span class="num" id="billsCount"></span><button class="editbtn" id="editBills" type="button">Edit bills</button></div>
+    <div class="editor" id="billsEditor" hidden></div>
+    <div class="bills" id="bills"></div>
+    <div class="bud">
+      <span class="name"><i style="background:var(--bills)"></i>Bills paid</span>
+      <span class="amt num" id="billsSum"></span>
+      <div class="track"><span id="billsBar2" style="background:var(--bills)"></span></div>
+      <span class="note num" id="billsLeft"></span>
+    </div>
+  </section>
+  <p class="hint">Swipe left for everyday spending →</p>
+  </div>
+
+  <div class="pane" id="pane-1" role="tabpanel" aria-labelledby="tab-1">
+  <form class="card" id="addForm" autocomplete="off">
+    <button type="button" class="collhead" id="addToggle" aria-expanded="true" aria-controls="addBody">
+      <h3>Add an expense</h3>
+      <svg class="chev" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="collbody open" id="addBody"><div class="collinner">
+    <div class="field">
+      <label for="amt">Amount ($)</label>
+      <input id="amt" class="amount" inputmode="decimal" placeholder="0.00">
+    </div>
+    <div class="field">
+      <span class="flabel">Category</span>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="note">Note (optional)</label><input id="note" type="text" placeholder="Shell, groceries…" maxlength="60"></div>
+      <div class="field"><label for="date">Date</label><input id="date" type="date"></div>
+    </div>
+    <button class="primary" id="addBtn" type="submit">Add expense</button>
+    <div class="msg" id="formMsg"></div>
+    </div></div>
+  </form>
+
+  <section class="card">
+    <div class="cardhead"><h3>Spending budgets</h3><span class="num" id="spendCount"></span><button class="editbtn" id="editCats" type="button">Edit categories</button></div>
+    <div class="editor" id="catsEditor" hidden></div>
+    <div class="budgets" id="budgets"></div>
+  </section>
+
+  <section class="card">
+    <h3>Spending this month</h3>
+    <div id="list"><div class="empty">Loading your expenses…</div></div>
+  </section>
+  <p class="hint">← Swipe right for bills</p>
+  </div>
+  </div>
+
+  <section class="card" id="shareCard">
+    <button type="button" class="collhead" id="shareToggle" aria-expanded="false" aria-controls="shareBody">
+      <h3>Share your live budget</h3>
+      <svg class="chev" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="collbody" id="shareBody"><div class="collinner">
+    <div class="pair">
+      <div class="qr" id="qr" aria-label="QR code for the view-only link"></div>
+      <div>
+        <p>Anyone who scans this code sees your budget live. They can look, but they can't change anything.</p>
+        <ol>
+          <li>On an iPhone, open the Camera and point it at the code.</li>
+          <li>On an Android, open the Camera or Google Lens and point it at the code.</li>
+          <li>Tap the link that pops up.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="linkbox num" id="shareLink">Setting up your link…</div>
+    <div class="updated" id="shareCode"></div>
+    <div class="eactions"><button type="button" class="primary" id="shareBtn">Send the link</button><span class="msg" id="shareMsg"></span></div>
+    </div></div>
+  </section>
+
+  <section id="incomePage" class="yearpage" hidden>
+    <div class="month">
+      <button class="iconbtn" id="iPrev" aria-label="Previous month">‹</button>
+      <h2 id="incomeMonth">This month</h2>
+      <button class="iconbtn" id="iNext" aria-label="Next month">›</button>
+    </div>
+    <section class="card">
+      <div class="cardhead"><h3>Deposits</h3><span class="num" id="incomeCount"></span><button class="editbtn" id="editIncome" type="button">Edit deposits</button></div>
+      <div class="editor" id="incomeEditor" hidden></div>
+      <div class="bills" id="deposits"></div>
+    </section>
+    <section class="card">
+      <h3>This month</h3>
+      <div class="ledger" id="incomeSummary"></div>
+    </section>
+    <section class="card">
+      <div class="cardhead"><h3>Savings</h3><button class="editbtn" id="editSavings" type="button">Edit savings</button></div>
+      <form class="saveedit" id="savingsEditor" hidden>
+        <label for="savingsInput">Amount saved up so far ($)</label>
+        <input id="savingsInput" inputmode="decimal" placeholder="0.00">
+        <div class="eactions"><button type="submit" class="primary">Save</button><button type="button" class="ghost" id="savingsCancel">Cancel</button></div>
+        <div class="emsg" id="savingsMsg"></div>
+      </form>
+      <div class="ledger" id="savingsBox"></div>
+    </section>
+    <button type="button" class="ghost backbtn" id="iBack">← Back to bills and spending</button>
+  </section>
+
+  <section id="yearPage" class="yearpage" hidden>
+    <div class="month">
+      <button class="iconbtn" id="yPrev" aria-label="Previous year">‹</button>
+      <h2 id="yearName">2026</h2>
+      <button class="iconbtn" id="yNext" aria-label="Next year">›</button>
+    </div>
+    <div class="tabs charttabs" role="tablist" aria-label="Graph type">
+      <button class="tab" role="tab" data-chart="line" aria-selected="true">Line</button>
+      <button class="tab" role="tab" data-chart="bar" aria-selected="false">Bar</button>
+      <button class="tab" role="tab" data-chart="pie" aria-selected="false">Pie</button>
+    </div>
+    <section class="card">
+      <div class="cardhead"><h3 id="chartTitle">Spent each month</h3><span id="chartSub"></span></div>
+      <div class="chartbox" id="chartBox"></div>
+      <div class="legend" id="chartLegend"></div>
+    </section>
+    <section class="card">
+      <h3>Year details</h3>
+      <div class="facts" id="facts"></div>
+    </section>
+    <section class="card">
+      <h3>Month by month</h3>
+      <div class="mtable" id="mtable"></div>
+    </section>
+    <button type="button" class="ghost backbtn" id="yBack">← Back to this month</button>
+  </section>
+
+  <section class="card" id="landing">
+    <h3>Pocket Budget</h3>
+    <p class="sub">Pocket Budget is an Android app. To see someone's budget, scan the QR code inside their app.</p>
+  </section>
+</div>
+
+
+<!-- Firebase: your project's settings live in config.js -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ---------- Pocket Budget: owner app (inside the Android app) + read-only live viewer ----------
+// A brand-new budget starts empty: no bills, and starter categories with no budget amounts.
+// Each person adds their own with "Edit bills" and "Edit categories".
+const DEFAULT_BILLS=[];
+const DEFAULT_CATS=[
+  {id:"gas",name:"Gas",limit:0,color:"gas"},
+  {id:"food",name:"Food",limit:0,color:"food"},
+  {id:"other",name:"Other",limit:0,color:"other"}];
+const PALETTE=["gas","food","disp","c5","c6","c7","c8","bills"];
+
+const params=new URLSearchParams(location.search);
+const VIEW_ID=params.get("view");
+const IN_APP=/PocketBudgetApp/.test(navigator.userAgent);
+// Pocket Budget 2: any phone (iPhone in Safari too) gets its own editable budget; ?view= links stay view only
+const MODE=VIEW_ID?"viewer":"owner";
+document.body.dataset.mode=MODE;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money=n=>(n<0?"-":"")+"$"+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pad=n=>String(n).padStart(2,"0");
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const keyOf=d=>d.getFullYear()+"-"+pad(d.getMonth()+1);
+const pct=(v,of)=>of?Math.min(v/of*100,100):0;
+const newId=n=>(String(n).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,20)||"item")+"-"+Math.random().toString(36).slice(2,6);
+const randomBudgetId=()=>{const a=new Uint8Array(15);crypto.getRandomValues(a);return Array.from(a,b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("")};
+function parseAmt(s){const n=parseFloat(String(s).replace(/[$,\s]/g,""));return isFinite(n)?Math.round(n*100)/100:NaN}
+function store(k,v){try{localStorage.setItem(k,v)}catch{}}
+function load(k){try{return localStorage.getItem(k)}catch{return null}}
+
+let view=new Date(); view.setDate(1);
+let state={paid:{},expenses:[],config:null,billMonths:{},billPlans:{},incomeMonths:{},incomePlans:{},savings:{}};
+let cat="food", budgetRef=null, ready=false, canEdit=false, budgetId=null;
+
+const asList=x=>Array.isArray(x)?x.filter(Boolean):Object.values(x||{}).filter(Boolean);
+// Bills can differ by month. A month uses, in order: its own list (edited for that month only),
+// else the most recent "this month and after" list starting on or before it, else the original list.
+function billsFor(mk){
+  const own=state.billMonths[mk]; if(own&&own.set) return asList(own.list);
+  const starts=Object.keys(state.billPlans).filter(k=>k<=mk).sort();
+  if(starts.length) return asList(state.billPlans[starts[starts.length-1]].list);
+  return state.config?asList(state.config.bills):DEFAULT_BILLS;
+}
+const bills=()=>billsFor(keyOf(view));
+// Deposits work the same way as bills: per month, or "this month and after".
+function incomeFor(mk){
+  const own=state.incomeMonths[mk]; if(own&&own.set) return asList(own.list);
+  const starts=Object.keys(state.incomePlans).filter(k=>k<=mk).sort();
+  if(starts.length) return asList(state.incomePlans[starts[starts.length-1]].list);
+  return [];
+}
+const cats=()=>{const c=state.config?.cats||DEFAULT_CATS;return c.some(x=>x.id==="other")?c:[...c,{id:"other",name:"Other",limit:0,color:"other"}]};
+const catColor=c=>`var(--${c.color||"other"})`;
+const catOf=id=>cats().find(c=>c.id===id)||cats().find(c=>c.id==="other");
+
+function renderChips(){
+  if(!cats().some(c=>c.id===cat)) cat=cats()[0].id;
+  $("chips").innerHTML=cats().map(c=>`<button type="button" class="chip" data-cat="${esc(c.id)}" aria-pressed="${c.id===cat}"><i style="background:${catColor(c)}"></i>${esc(c.name)}</button>`).join("");
+}
+$("chips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;cat=b.dataset.cat;
+  document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.cat===cat));});
+$("date").value=todayISO();
+function setBar(id,v,of){const el=$(id);el.style.width=pct(v,of)+"%";el.classList.toggle("over",of>0&&v>of)}
+// Paid total for a month: only checkmarks on bills that are in that month's list count
+// (a checkmark left over from a bill that was removed or re-added does not).
+function paidTotal(mk){const B=billsFor(mk),m=state.paid[mk]||{};
+  return B.reduce((t,b)=>{const v=m[b.id];return t+(typeof v==="number"?v:(v?b.amount:0))},0)}
+function paidAmount(month,billId){const v=month[billId];if(typeof v==="number")return v;if(v){const b=bills().find(x=>x.id===billId);return b?b.amount:0}return 0}
+
+
+// ---- Bill due dates ----
+// A bill's "due" is a day of the month (1-31). Shown as month/day for the month on screen.
+function dueDate(b){const d=parseInt(b.due,10);if(!(d>=1&&d<=31))return null;
+  const last=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
+  return new Date(view.getFullYear(),view.getMonth(),Math.min(d,last))}
+function dueLabel(b){const dd=dueDate(b);return dd?` <span class="due num">Due ${dd.getMonth()+1}/${dd.getDate()}</span>`:""}
+function dueStatus(b,paid){
+  if(paid)return `<span class="bs">Paid this month</span>`;
+  const dd=dueDate(b);if(!dd)return `<span class="bs">Not paid yet</span>`;
+  const t=new Date();t.setHours(0,0,0,0);
+  const days=Math.round((dd-t)/86400000);
+  let txt,cls="";
+  if(days>1)txt=`${days} days until due`;
+  else if(days===1){txt="Due tomorrow";cls=" soon"}
+  else if(days===0){txt="Due today";cls=" soon"}
+  else{txt=`${-days} day${days===-1?"":"s"} overdue`;cls=" late"}
+  if(days>1&&days<=3)cls=" soon";
+  return `<span class="bs">Not paid yet · <span class="cd${cls}">${txt}</span></span>`;
+}
+function render(){
+  try{renderYear()}catch{}
+  try{renderIncome()}catch{}
+  try{pushWidget()}catch{}
+  const mk=keyOf(view), B=bills(), C=cats();
+  const BILLS_BUDGET=B.reduce((s,b)=>s+b.amount,0), SPEND_BUDGET=C.reduce((s,c)=>s+(+c.limit||0),0), TOTAL=BILLS_BUDGET+SPEND_BUDGET;
+  $("monthName").textContent=view.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  const paidMap=state.paid[mk]||{};
+  const billsPaid=paidTotal(mk);
+  const nPaid=B.filter(b=>paidMap[b.id]).length;
+  const items=state.expenses.filter(e=>(e.date||"").startsWith(mk))
+    .sort((a,b)=>b.date.localeCompare(a.date)||(b.created||0)-(a.created||0));
+  const by={};C.forEach(c=>by[c.id]=0);items.forEach(e=>by[catOf(e.category).id]+=+e.amount||0);
+  const otherSpent=items.reduce((s,e)=>s+(+e.amount||0),0);
+  const spent=billsPaid+otherSpent, left=TOTAL-spent;
+
+  $("left").textContent=money(Math.abs(left));
+  $("left").classList.toggle("over",left<0);
+  $("leftLabel").textContent=left<0?"Over budget by":"Left this month";
+  $("ofBudget").textContent=TOTAL?`${money(spent)} spent of ${money(TOTAL)} budget`:(canEdit?"Set up your budget with Edit bills and Edit categories.":`${money(spent)} spent`);
+  setBar("totalBar",spent,TOTAL);
+  $("billsTotal").textContent=money(billsPaid);
+  $("billsOf").textContent=`of ${money(BILLS_BUDGET)}`;
+  setBar("billsBar",billsPaid,BILLS_BUDGET);
+  $("otherTotal").textContent=money(otherSpent);
+  $("otherOf").textContent=SPEND_BUDGET?`of ${money(SPEND_BUDGET)}`:"No spending budget set";
+  setBar("otherBar",otherSpent,SPEND_BUDGET);
+
+  const now=new Date(), isCur=keyOf(now)===mk, dim=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
+  if(isCur){const dl=dim-now.getDate()+1;
+    $("stats").innerHTML=`<span><b>${dl}</b> days left</span>`+(SPEND_BUDGET?`<span><b>${money(Math.max(SPEND_BUDGET-otherSpent,0)/dl)}</b> a day for everyday spending</span>`:"")}
+  else $("stats").innerHTML=`<span>${view<now?"Past month":"Upcoming month"}</span>`;
+
+  $("billsCount").textContent=`${nPaid} of ${B.length} paid`;
+  // Soonest due date first; bills without a due day go to the bottom in their saved order.
+  const dueKey=b=>{const dd=dueDate(b);return dd?dd.getDate():99};
+  const shownBills=[...B].sort((a,b)=>dueKey(a)-dueKey(b));
+  $("bills").innerHTML=B.length?shownBills.map(b=>`<label class="bill${paidMap[b.id]?" paid":""}" for="bill-${esc(b.id)}">
+    <input type="checkbox" id="bill-${esc(b.id)}" data-bill="${esc(b.id)}" ${paidMap[b.id]?"checked":""} ${canEdit?"":"disabled"}>
+    <span><span class="bn">${esc(b.name)}</span>${dueLabel(b)}${dueStatus(b,!!paidMap[b.id])}</span>
+    <span class="ba num">${money(paidMap[b.id]?paidAmount(paidMap,b.id):b.amount)}</span></label>`).join(""):`<div class="empty">${canEdit?"No bills yet. Tap Edit bills to add your monthly bills.":"No bills yet."}</div>`;
+  setBar("billsBar2",billsPaid,BILLS_BUDGET);
+  $("billsSum").innerHTML=`${money(billsPaid)} <small>of ${money(BILLS_BUDGET)}</small>`;
+  $("billsLeft").textContent=B.length&&nPaid===B.length?"All bills paid this month":`${money(Math.max(BILLS_BUDGET-billsPaid,0))} still to pay`;
+
+  $("spendCount").textContent=SPEND_BUDGET?`${money(otherSpent)} of ${money(SPEND_BUDGET)}`:money(otherSpent);
+  $("budgets").innerHTML=C.map(c=>{const v=by[c.id],lim=+c.limit||0;
+    if(!lim) return `<div class="bud"><span class="name"><i style="background:${catColor(c)}"></i>${esc(c.name)}</span><span class="amt num">${money(v)}</span>
+      <span class="note">No set budget. Counts toward everything else.</span></div>`;
+    const rem=lim-v, over=rem<0;
+    return `<div class="bud"><span class="name"><i style="background:${catColor(c)}"></i>${esc(c.name)}</span>
+      <span class="amt num">${money(v)} <small>of ${money(lim)}</small></span>
+      <div class="track"><span class="${over?"over":""}" style="width:${pct(v,lim)}%;background:${catColor(c)}"></span></div>
+      <span class="note num${over?" over":""}">${over?money(-rem)+" over budget":money(rem)+" left"}</span></div>`}).join("");
+
+  if(!items.length){$("list").innerHTML=`<div class="empty">${ready?"No expenses in "+view.toLocaleDateString("en-US",{month:"long"})+" yet."+(canEdit?" Add one above.":""):"Loading…"}</div>`;return}
+  let html="",lastDay="";
+  for(const e of items){
+    if(e.date!==lastDay){lastDay=e.date;const d=new Date(e.date+"T12:00");
+      html+=(html?"</div>":"")+`<div class="day">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</div><div class="items">`}
+    const c=catOf(e.category);
+    html+=`<div class="item"><span class="sw" style="background:${catColor(c)}">${esc((c.name||"?")[0].toUpperCase())}</span>
+      <span class="t"><b>${esc(e.note||c.name)}</b><small>${esc(c.name)}</small></span>
+      <span class="a num">${money(+e.amount)}</span>
+      ${canEdit?`<button class="del" data-id="${esc(e.id)}" aria-label="Delete expense">Delete</button>`:"<span></span>"}</div>`;
+  }
+  $("list").innerHTML=html+"</div>";
+}
+
+$("prev").onclick=()=>{view.setMonth(view.getMonth()-1);editorClosers.forEach(f=>f());render()};
+$("next").onclick=()=>{view.setMonth(view.getMonth()+1);editorClosers.forEach(f=>f());render()};
+let connected=false, pending=0, pendingTimer=null;
+function setLive(on,text){connected=on;$("live").classList.toggle("on",on&&!pending);$("liveText").textContent=pending?"Saving…":text}
+function liveRefresh(){setLive(connected,connected?"Live":"Offline")}
+// Every save goes through here: shows "Saving…" until the database confirms it.
+function saving(p){
+  pending++;liveRefresh();
+  clearTimeout(pendingTimer);
+  pendingTimer=setTimeout(()=>{if(pending){notice("Your change is saved on this phone and will be sent as soon as the internet connection is back.");reconnect()}},4000);
+  return Promise.resolve(p).finally(()=>{pending--;if(!pending){clearTimeout(pendingTimer);if($("notice").textContent.startsWith("Your change is saved"))notice("")}liveRefresh()});
+}
+// Wake the live connection back up (phones put it to sleep in the background).
+function reconnect(){try{const db=firebase.database();db.goOffline();db.goOnline()}catch{}}
+function notice(t){$("notice").hidden=!t;$("notice").textContent=t||""}
+const saveErr="Couldn't save. Check your internet connection and try again.";
+
+// ---- Owner actions ----
+$("bills").addEventListener("change",async e=>{
+  const cb=e.target.closest("input[data-bill]");if(!cb||!canEdit)return;
+  const mk=keyOf(view), b=bills().find(x=>x.id===cb.dataset.bill);
+  try{await saving(budgetRef.child("paid/"+mk+"/"+cb.dataset.bill).set(cb.checked?(b?b.amount:0):null))}catch{cb.checked=!cb.checked;notice(saveErr)}
+});
+$("addForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const amount=parseAmt($("amt").value),msg=$("formMsg");
+  msg.className="msg";
+  if(!(amount>0)){msg.className="msg err";msg.textContent="Enter an amount greater than $0.";return}
+  if(!canEdit){msg.className="msg err";msg.textContent="Not connected yet. Check your internet connection.";return}
+  $("addBtn").disabled=true;
+  const date=$("date").value||todayISO();
+  try{
+    await saving(budgetRef.child("expenses").push({amount,category:cat,note:$("note").value.trim(),date,created:Date.now()}));
+    $("amt").value="";$("note").value="";msg.textContent=`Added ${money(amount)} to ${catOf(cat).name}.`;
+    const d=new Date(date+"T12:00");if(keyOf(d)!==keyOf(view)){view=new Date(d.getFullYear(),d.getMonth(),1);render()}
+  }catch{msg.className="msg err";msg.textContent=saveErr}
+  $("addBtn").disabled=false;
+});
+let pendingDel=null,delTimer=null;
+$("list").addEventListener("click",async e=>{
+  const b=e.target.closest(".del");if(!b||!canEdit)return;
+  if(pendingDel!==b.dataset.id){
+    document.querySelectorAll(".del.confirm").forEach(x=>{x.classList.remove("confirm");x.textContent="Delete"});
+    pendingDel=b.dataset.id;b.classList.add("confirm");b.textContent="Tap to confirm";
+    clearTimeout(delTimer);delTimer=setTimeout(()=>{pendingDel=null;render()},4000);return}
+  pendingDel=null;clearTimeout(delTimer);
+  try{await saving(budgetRef.child("expenses/"+b.dataset.id).remove())}catch{notice(saveErr)}
+});
+
+const editorClosers=[];
+// Settings for each editable list. Bills and deposits can differ by month; categories apply to every month.
+const EDIT_KINDS={
+  bills:{box:"billsEditor",btn:"editBills",label:"Edit bills",col:"Bill",amtCol:"Per month",ex:"e.g. Internet",
+    add:"a bill",dueCol:"Due day",dueAria:"Day of the month it's due",monthly:true,months:"billMonths",plans:"billPlans",what:"bills",
+    need:n=>`Enter how much ${n} costs each month.`,dayErr:n=>`Enter the day ${n} is due as a number from 1 to 31, or leave it blank.`},
+  income:{box:"incomeEditor",btn:"editIncome",label:"Edit deposits",col:"Deposit",amtCol:"Amount",ex:"e.g. Paycheck",
+    add:"a deposit",dueCol:"Day",dueAria:"Day of the month you get it",monthly:true,months:"incomeMonths",plans:"incomePlans",what:"deposits",
+    need:n=>`Enter how much ${n} is.`,dayErr:n=>`Enter the day you get ${n} as a number from 1 to 31, or leave it blank.`},
+  cats:{box:"catsEditor",btn:"editCats",label:"Edit categories",col:"Category",amtCol:"Monthly budget",ex:"e.g. Pets",add:"a category",monthly:false}
+};
+function makeEditor(kind){
+  const K=EDIT_KINDS[kind], box=$(K.box), btn=$(K.btn);
+  if(!box||!btn)return;
+  const label=K.label, amtKey=kind==="cats"?"limit":"amount", withDue=!!K.monthly;
+  let draft=null, scope="only";
+  const close=()=>{box.hidden=true;btn.textContent=label};
+  editorClosers.push(close);
+  const source=()=>kind==="bills"?bills():kind==="income"?incomeFor(keyOf(view)):cats();
+  function draw(){
+    box.innerHTML=`<div class="ehead${withDue?" withdue":""}"><span>${K.col}</span><span>${K.amtCol}</span>${withDue?`<span>${K.dueCol}</span>`:""}<span></span></div>`+
+      draft.map((r,i)=>{const fixed=kind==="cats"&&r.id==="other";
+        return `<div class="erow${withDue?" withdue":""}">${fixed?`<span class="fixed">Other</span>`:`<input type="text" id="${kind}-n-${i}" data-i="${i}" data-f="name" value="${esc(r.name)}" placeholder="${K.ex}" maxlength="30" aria-label="Name">`}
+        <input inputmode="decimal" id="${kind}-a-${i}" data-i="${i}" data-f="amt" value="${r[amtKey]===""?"":esc(r[amtKey])}" placeholder="${kind==="cats"?"No limit":"0.00"}" aria-label="Amount">
+        ${withDue?`<input inputmode="numeric" id="${kind}-d-${i}" data-i="${i}" data-f="due" value="${r.due?esc(r.due):""}" placeholder="Day" maxlength="2" aria-label="${K.dueAria}">`:""}
+        <button type="button" class="rm" data-rm="${i}" aria-label="Remove" ${fixed?"disabled":""}>×</button></div>`}).join("")+
+      `<button type="button" class="addrow" data-add>+ Add ${K.add}</button>
+      ${K.monthly?(()=>{const mn=view.toLocaleDateString("en-US",{month:"long"});return `<fieldset class="scope"><legend>Save these ${K.what} for</legend>
+        <label><input type="radio" name="${kind}Scope" value="only" ${scope==="only"?"checked":""}> ${mn} only</label>
+        <label><input type="radio" name="${kind}Scope" value="after" ${scope==="after"?"checked":""}> ${mn} and every month after</label></fieldset>`})():""}
+      <div class="emsg" data-msg></div>
+      <div class="eactions"><button type="button" class="primary" data-save>Save</button><button type="button" class="ghost" data-cancel>Cancel</button></div>`;
+  }
+  btn.onclick=()=>{
+    if(!box.hidden){close();return}
+    draft=source().map(r=>({...r,[amtKey]:kind==="cats"&&!r.limit?"":r[amtKey]}));
+    scope="only";
+    draw();box.hidden=false;btn.textContent="Close";
+  };
+  box.addEventListener("change",e=>{if(e.target.name===kind+"Scope")scope=e.target.value});
+  box.addEventListener("input",e=>{const t=e.target;if(t.dataset.i==null)return;const r=draft[+t.dataset.i];
+    if(t.dataset.f==="name")r.name=t.value;else if(t.dataset.f==="due")r.due=t.value;else r[amtKey]=t.value});
+  box.addEventListener("click",async e=>{
+    const t=e.target;
+    if(t.dataset.rm!=null){draft.splice(+t.dataset.rm,1);draw();return}
+    if(t.hasAttribute("data-add")){
+      const used=new Set(draft.map(r=>r.color));
+      draft.push(kind==="cats"?{id:"",name:"",limit:"",color:PALETTE.find(p=>!used.has(p))||"c5"}:{id:"",name:"",amount:""});
+      draw();const inp=box.querySelector(`#${kind}-n-${draft.length-1}`);inp&&inp.focus();return}
+    if(t.hasAttribute("data-cancel")){close();return}
+    if(t.hasAttribute("data-save")){
+      const m=box.querySelector("[data-msg]"), out=[];
+      for(const r of draft){
+        const name=(r.id==="other"?"Other":String(r.name||"").trim());
+        const raw=String(r[amtKey]??"").trim(), amt=raw===""?0:parseAmt(raw);
+        if(!name){m.textContent="Every row needs a name, or remove the empty row.";return}
+        if(!(amt>=0)){m.textContent=`Enter the amount for ${name} as a number, like 120.`;return}
+        if(K.monthly&&!(amt>0)){m.textContent=K.need(name);return}
+        let due=null;
+        if(withDue&&String(r.due??"").trim()!==""){due=parseInt(String(r.due).trim(),10);
+          if(!(due>=1&&due<=31)||!/^\d{1,2}$/.test(String(r.due).trim())){m.textContent=K.dayErr(name);return}}
+        out.push(kind==="cats"?{id:r.id||newId(name),name,limit:amt,color:r.color||"c5"}
+          :(due?{id:r.id||newId(name),name,amount:amt,due}:{id:r.id||newId(name),name,amount:amt}));
+      }
+      if(!canEdit){m.textContent="Not connected yet, so changes can't be saved.";return}
+      t.disabled=true;
+      let write;
+      if(kind==="cats") write=budgetRef.child("config/cats").set(out);
+      else{
+        const mk=keyOf(view);
+        if(scope==="only") write=budgetRef.child(K.months+"/"+mk).set({set:true,list:out});
+        else{ // this month and after: starts a new plan here, replaces later plans; months edited on their own keep their own list
+          const up={[K.plans+"/"+mk]:{set:true,list:out},[K.months+"/"+mk]:null};
+          Object.keys(state[K.plans]||{}).filter(k=>k>mk).forEach(k=>up[K.plans+"/"+k]=null);
+          write=budgetRef.update(up);
+        }
+      }
+      try{await saving(write);close()}
+      catch{m.textContent=saveErr;t.disabled=false}
+    }
+  });
+}
+
+
+// ---- Light / dark switch (remembers your choice; starts out matching the phone) ----
+(function(){
+  const root=document.documentElement, mq=matchMedia("(prefers-color-scheme: dark)");
+  const isDark=()=>root.dataset.theme?root.dataset.theme==="dark":mq.matches;
+  function sync(){const d=isDark();root.classList.toggle("is-dark",d);
+    $("themeBtn").setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode");
+    const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=d?"#0f151b":"#1f5f8b";
+    try{window.Android&&Android.setDarkBars&&Android.setDarkBars(d)}catch{}}
+  $("themeBtn").onclick=()=>{const next=isDark()?"light":"dark";root.dataset.theme=next;try{localStorage.setItem("pb2_theme",next)}catch{}sync()};
+  try{mq.addEventListener("change",sync)}catch{}
+  sync();
+})();
+
+
+// ---- Bottom buttons: slide away when scrolling down, back at the very top (Android app only) ----
+(function(){
+  if(!(window.Android&&Android.setNavHidden))return;
+  let hidden=false,ticking=false;
+  function check(){ticking=false;const y=window.scrollY||document.documentElement.scrollTop||0;
+    if(!hidden&&y>40){hidden=true;try{Android.setNavHidden(true)}catch{}}
+    else if(hidden&&y<=2){hidden=false;try{Android.setNavHidden(false)}catch{}}}
+  addEventListener("scroll",()=>{if(!ticking){ticking=true;requestAnimationFrame(check)}},{passive:true});
+})();
+
+
+// ---- Fold-up sections: the arrow opens and closes them (remembered on this phone) ----
+function collapsible(btnId,bodyId,key,openByDefault,label){
+  const btn=$(btnId), body=$(bodyId);
+  function set(open,save){btn.setAttribute("aria-expanded",String(open));body.classList.toggle("open",open);
+    btn.setAttribute("aria-label",(open?"Hide ":"Show ")+label);
+    if(save)try{localStorage.setItem(key,open?"1":"0")}catch{}}
+  let start=openByDefault;try{const v=localStorage.getItem(key);if(v!==null)start=v==="1"}catch{}
+  set(start,false);
+  btn.onclick=()=>set(btn.getAttribute("aria-expanded")!=="true",true);
+}
+collapsible("shareToggle","shareBody","pb2_share_open",false,"the share section");
+collapsible("addToggle","addBody","pb2_add_open",true,"the add an expense section");
+
+
+// ---- Year graph page ----
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let yearView=new Date().getFullYear(), chartType="line", yearOpen=false;
+try{const c=localStorage.getItem("pb2_chart");if(["line","bar","pie"].includes(c))chartType=c}catch{}
+function monthTotals(mk){
+  const B=billsFor(mk), paidMap=state.paid[mk]||{};
+  const bills=paidTotal(mk);
+  const byCat={};let other=0;
+  state.expenses.forEach(e=>{if((e.date||"").startsWith(mk)){const a=+e.amount||0;other+=a;const c=catOf(e.category).id;byCat[c]=(byCat[c]||0)+a}});
+  const budget=B.reduce((t,b)=>t+b.amount,0)+cats().reduce((t,c)=>t+(+c.limit||0),0);
+  return {bills,other,total:bills+other,budget,byCat};
+}
+const short=n=>n>=1000?"$"+(n/1000).toFixed(n%1000===0?0:1)+"k":"$"+Math.round(n);
+function niceMax(v){if(v<=0)return 100;const p=Math.pow(10,Math.floor(Math.log10(v)));for(const m of [1,1.5,2,2.5,3,4,5,6,8,10])if(m*p>=v)return m*p;return 10*p}
+function renderYear(){
+  if(!yearOpen)return;
+  $("yearName").textContent=yearView;
+  document.querySelectorAll(".charttabs .tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.chart===chartType)));
+  const now=new Date(), curKey=keyOf(now);
+  const rows=MONTHS.map((m,i)=>{const mk=yearView+"-"+pad(i+1);return {i,m,mk,...monthTotals(mk),future:mk>curKey}});
+  const box=$("chartBox"), legend=$("chartLegend");
+  const yearTotal=rows.reduce((t,r)=>t+r.total,0);
+  if(chartType==="pie"){
+    $("chartTitle").textContent="Where the money went";
+    $("chartSub").textContent=money(yearTotal);
+    const parts=[{name:"Bills",color:"var(--bills)",v:rows.reduce((t,r)=>t+r.bills,0)}].concat(cats().map(c=>({name:c.name,color:catColor(c),v:rows.reduce((t,r)=>t+(r.byCat[c.id]||0),0)}))).filter(p=>p.v>0);
+    legend.innerHTML="";
+    if(!yearTotal){box.innerHTML=`<div class="empty">Nothing spent in ${yearView} yet.</div>`;return}
+    const R=90,cx=110,cy=110;let a=-Math.PI/2,paths="";
+    parts.forEach((p,k)=>{const frac=p.v/yearTotal,a2=a+frac*Math.PI*2;
+      if(frac>=0.9999)paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${p.color}" data-k="${k}"/>`;
+      else{const x1=cx+R*Math.cos(a),y1=cy+R*Math.sin(a),x2=cx+R*Math.cos(a2),y2=cy+R*Math.sin(a2);
+        paths+=`<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${frac>.5?1:0} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${p.color}" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round" data-k="${k}"/>`}
+      a=a2});
+    box.innerHTML=`<svg viewBox="0 0 220 220" style="max-width:240px;margin:0 auto" role="img" aria-label="Spending by category for ${yearView}">${paths}<circle cx="${cx}" cy="${cy}" r="46" fill="var(--surface)"/><text x="${cx}" y="${cy-4}" text-anchor="middle" class="axt">${yearView}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" style="fill:var(--ink);font:800 15px var(--display)">${short(yearTotal)}</text></svg>
+      <div class="pielist">${parts.map(p=>`<div class="pierow"><i style="background:${p.color}"></i><span>${esc(p.name)}</span><b class="num">${money(p.v)}</b><small class="num">${Math.round(p.v/yearTotal*100)}%</small></div>`).join("")}</div>`;
+    box.style.display="flex";box.style.flexDirection="column";box.style.gap="14px";
+  }else{
+    box.style.display="";
+    $("chartTitle").textContent="Spent each month";
+    $("chartSub").textContent=money(yearTotal)+" this year";
+    const W=360,H=230,L=44,Rm=8,T=12,Bm=24,pw=W-L-Rm,ph=H-T-Bm;
+    const shown=rows.filter(r=>!r.future);
+    const max=niceMax(Math.max(...rows.map(r=>Math.max(r.total,r.budget)),1));
+    const x=i=>L+pw*(i+.5)/12, y=v=>T+ph-(v/max)*ph, step=pw/12;
+    let g="";
+    for(let k=0;k<=4;k++){const v=max*k/4,yy=y(v);g+=`<line class="gridl" x1="${L}" x2="${W-Rm}" y1="${yy}" y2="${yy}"/><text class="axt num" x="${L-6}" y="${yy+3}" text-anchor="end">${short(v)}</text>`}
+    rows.forEach(r=>g+=`<text class="axt${r.mk===curKey?" cur":""}" x="${x(r.i)}" y="${H-6}" text-anchor="middle">${r.m}</text>`);
+    // budget reference
+    const bpts=rows.filter(r=>r.budget>0).map(r=>`${x(r.i)},${y(r.budget)}`);
+    let marks="";
+    if(chartType==="bar"){
+      const bw=Math.max(6,step*.58);
+      shown.forEach(r=>{if(r.total<=0)return;const h=Math.max(ph*r.total/max,2),yy=T+ph-h,rr=Math.min(4,h/2),x0=x(r.i)-bw/2;
+        marks+=`<path d="M${x0},${T+ph} V${yy+rr} Q${x0},${yy} ${x0+rr},${yy} H${x0+bw-rr} Q${x0+bw},${yy} ${x0+bw},${yy+rr} V${T+ph} Z" fill="${r.total>r.budget&&r.budget?"var(--bad)":"var(--accent)"}"/>`});
+    }else{
+      if(shown.length){const pts=shown.map(r=>`${x(r.i)},${y(r.total)}`).join(" ");
+        marks+=`<polygon points="${x(shown[0].i)},${T+ph} ${pts} ${x(shown[shown.length-1].i)},${T+ph}" fill="var(--accent)" opacity=".10"/><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+        shown.forEach(r=>marks+=`<circle cx="${x(r.i)}" cy="${y(r.total)}" r="${r.mk===curKey?5:4}" fill="${r.total>r.budget&&r.budget?"var(--bad)":"var(--accent)"}" stroke="var(--surface)" stroke-width="2"/>`)}
+    }
+    const budgetLine=bpts.length?`<polyline points="${bpts.join(" ")}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>`:"";
+    const hits=rows.map(r=>`<rect x="${x(r.i)-step/2}" y="${T}" width="${step}" height="${ph}" fill="transparent" data-i="${r.i}"/>`).join("");
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Amount spent each month of ${yearView}">${g}${budgetLine}${marks}<line x1="${L}" x2="${W-Rm}" y1="${T+ph}" y2="${T+ph}" stroke="var(--muted)" stroke-width="1"/>${hits}</svg><div class="tip" id="tip" hidden></div>`;
+    legend.innerHTML=`<span><i class="${chartType==="line"?"ln":""}" style="background:var(--accent)"></i>Spent</span><span><i class="dash"></i>Budget</span><span><i style="background:var(--bad)"></i>Over budget</span>`;
+    const svg=box.querySelector("svg"), tip=$("tip");
+    const show=ev=>{const t=ev.target.closest("rect[data-i]");if(!t){tip.hidden=true;return}
+      const r=rows[+t.dataset.i], bb=svg.getBoundingClientRect(), sc=bb.width/W;
+      tip.innerHTML=`<b>${r.m} ${yearView}</b><br>${r.future?"Not here yet":"Spent "+money(r.total)}${r.budget?"<br>Budget "+money(r.budget):""}`;
+      tip.style.left=(x(r.i)*sc)+"px";tip.style.top=((r.future?y(0):y(Math.max(r.total,0)))*sc)+"px";tip.hidden=false};
+    svg.addEventListener("pointermove",show);svg.addEventListener("pointerdown",show);svg.addEventListener("pointerleave",()=>tip.hidden=true);
+  }
+  // facts
+  const withSpend=rows.filter(r=>!r.future&&r.total>0);
+  const most=withSpend.reduce((a,r)=>!a||r.total>a.total?r:a,null), least=withSpend.reduce((a,r)=>!a||r.total<a.total?r:a,null);
+  const avg=withSpend.length?yearTotal/withSpend.length:0, over=rows.filter(r=>!r.future&&r.budget&&r.total>r.budget).length;
+  const billsYear=rows.reduce((t,r)=>t+r.bills,0);
+  $("facts").innerHTML=withSpend.length?`
+    <div class="fact"><span class="label">Most spent</span><b class="num">${money(most.total)}</b><small>${MONTHS[most.i]} ${yearView}</small></div>
+    <div class="fact"><span class="label">Least spent</span><b class="num">${money(least.total)}</b><small>${MONTHS[least.i]} ${yearView}</small></div>
+    <div class="fact"><span class="label">Monthly average</span><b class="num">${money(avg)}</b><small>over ${withSpend.length} month${withSpend.length>1?"s":""} with spending</small></div>
+    <div class="fact"><span class="label">Over budget</span><b class="num">${over}</b><small>month${over===1?"":"s"} this year</small></div>
+    <div class="fact wide"><span class="label">Total for ${yearView}</span><b class="num">${money(yearTotal)}</b><small>${money(billsYear)} bills · ${money(yearTotal-billsYear)} everything else</small></div>`
+    :`<div class="empty fact wide">No spending recorded in ${yearView} yet.</div>`;
+  $("mtable").innerHTML=rows.filter(r=>!r.future).reverse().map(r=>`<div class="mrow"><span>${MONTHS[r.i]}</span><span class="num${r.budget&&r.total>r.budget?" over":""}">${money(r.total)}</span><small class="num">${r.budget?"of "+money(r.budget):""}</small></div>`).join("")||`<div class="empty">This year hasn't started yet.</div>`;
+}
+function openYear(open){
+  if(open&&typeof incomeOpen!=="undefined"&&incomeOpen)openIncome(false);
+  yearOpen=open;document.body.classList.toggle("yearmode",open);$("yearPage").hidden=!open;
+  $("graphBtn").setAttribute("aria-pressed",String(open));$("graphBtn").setAttribute("aria-label",open?"Close the year graph":"Open the year graph");
+  if(open){yearView=view.getFullYear();renderYear()}
+  window.scrollTo(0,0);
+}
+$("graphBtn").onclick=()=>openYear(!yearOpen);
+$("yBack").onclick=()=>openYear(false);
+$("yPrev").onclick=()=>{yearView--;renderYear()};
+$("yNext").onclick=()=>{yearView++;renderYear()};
+document.querySelector(".charttabs").addEventListener("click",e=>{const t=e.target.closest(".tab");if(!t)return;chartType=t.dataset.chart;try{localStorage.setItem("pb2_chart",chartType)}catch{}renderYear()});
+
+
+// ---- Home-screen widget: the app sends this month's numbers to Android (view only) ----
+let widgetTimer=null;
+function pushWidget(){
+  if(MODE!=="owner"||!ready||!(window.Android&&Android.updateWidget))return;
+  clearTimeout(widgetTimer);
+  widgetTimer=setTimeout(()=>{try{
+    const now=new Date(), mk=keyOf(now), B=billsFor(mk), paidMap=state.paid[mk]||{}, C=cats();
+    const css=getComputedStyle(document.documentElement), hex=c=>css.getPropertyValue("--"+(c||"other")).trim()||"#7a8792";
+    const billRows=B.map(b=>{const pd=!!paidMap[b.id], d=parseInt(b.due,10);
+      return {name:b.name,amount:b.amount,due:(d>=1&&d<=31)?d:0,paid:pd,paidAmount:pd?(typeof paidMap[b.id]==="number"?paidMap[b.id]:b.amount):0}})
+      .sort((a,b)=>(a.due||99)-(b.due||99));
+    const billsPaid=paidTotal(mk);
+    const by={};C.forEach(c=>by[c.id]=0);let spent=0;
+    state.expenses.forEach(e=>{if((e.date||"").startsWith(mk)){const a=+e.amount||0;spent+=a;by[catOf(e.category).id]+=a}});
+    const catRows=C.map(c=>({name:c.name,spent:by[c.id]||0,limit:+c.limit||0,color:hex(c.color)}));
+    const billsBudget=B.reduce((t,b)=>t+b.amount,0), spendBudget=C.reduce((t,c)=>t+(+c.limit||0),0);
+    Android.updateWidget(JSON.stringify({month:mk,monthName:now.toLocaleDateString("en-US",{month:"long"}),
+      billsPaid,billsBudget,nPaid:B.filter(b=>paidMap[b.id]).length,nBills:B.length,bills:billRows,
+      spent,spendBudget,cats:catRows,left:billsBudget+spendBudget-billsPaid-spent,dark:document.documentElement.classList.contains("is-dark")}));
+  }catch(e){}},400);
+}
+
+
+// ---- Income page ----
+let incomeOpen=false;
+function depositStatus(b){
+  const dd=dueDate(b);if(!dd)return `<span class="bs">Every month</span>`;
+  const t=new Date();t.setHours(0,0,0,0);
+  const days=Math.round((dd-t)/86400000);
+  let txt,cls="";
+  if(days>1)txt=`${days} days until deposit`;
+  else if(days===1){txt="Arrives tomorrow";cls=" soon"}
+  else if(days===0){txt="Arrives today";cls=" got"}
+  else{txt="Received";cls=" got"}
+  return `<span class="bs"><span class="cd${cls}">${txt}</span></span>`;
+}
+function renderIncome(){
+  if(!incomeOpen)return;
+  const mk=keyOf(view), D=incomeFor(mk), B=billsFor(mk), paidMap=state.paid[mk]||{};
+  $("incomeMonth").textContent=view.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  const income=D.reduce((t,d)=>t+d.amount,0);
+  $("incomeCount").textContent=D.length?`${D.length} deposit${D.length>1?"s":""}`:"";
+  const dueKey=b=>{const dd=dueDate(b);return dd?dd.getDate():99};
+  $("deposits").innerHTML=D.length?[...D].sort((a,b)=>dueKey(a)-dueKey(b)).map(d=>{const dd=dueDate(d);
+    return `<div class="bill dep"><span class="depicon" aria-hidden="true">$</span>
+      <span><span class="bn">${esc(d.name)}</span>${dd?` <span class="due num">${dd<new Date(new Date().setHours(0,0,0,0))?"Got":"Arrives"} ${dd.getMonth()+1}/${dd.getDate()}</span>`:""}${depositStatus(d)}</span>
+      <span class="ba num">${money(d.amount)}</span></div>`}).join("")
+    :`<div class="empty">${canEdit?"No deposits yet. Tap Edit deposits to add your paychecks or other income.":"No deposits yet."}</div>`;
+  // bills: paid amounts plus what's still to pay
+  let billsPaid=0,billsUnpaid=0;
+  B.forEach(b=>{if(paidMap[b.id])billsPaid+=typeof paidMap[b.id]==="number"?paidMap[b.id]:b.amount;else billsUnpaid+=b.amount});
+  // Everything else: what's spent so far plus what's still left in each category's budget
+  // (a category that's over budget counts what was actually spent).
+  const byCat={};state.expenses.forEach(e=>{if((e.date||"").startsWith(mk)){const c=catOf(e.category).id;byCat[c]=(byCat[c]||0)+(+e.amount||0)}});
+  let other=0,unspent=0;
+  cats().forEach(c=>{const sp=byCat[c.id]||0,lim=+c.limit||0;other+=sp;if(lim>sp)unspent+=lim-sp});
+  const everything=other+unspent;
+  const total=billsPaid+billsUnpaid+everything, left=income-total;
+  $("incomeSummary").innerHTML=`
+    <div class="lrow"><span>Income this month</span><b class="num plus">${money(income)}</b></div>
+    <div class="lrow"><span>Bills, paid and unpaid</span><b class="num">−${money(billsPaid+billsUnpaid)}</b><small class="num">${money(billsPaid)} paid · ${money(billsUnpaid)} still to pay</small></div>
+    <div class="lrow"><span>Everything else, spent and unspent</span><b class="num">−${money(everything)}</b><small class="num">${money(other)} spent · ${money(unspent)} still left in your budgets</small></div>
+    <div class="lrow total"><span>Total expenses</span><b class="num">−${money(total)}</b></div>
+    <div class="lrow left"><span>${left<0?"Short by":"Left after expenses"}</span><b class="num${left<0?" neg":""}">${money(Math.abs(left))}</b></div>`;
+  // Savings: the amount saved so far (kept until you change it), plus what's left after expenses this month.
+  const saved=savingsFor(mk), goal=saved+left;
+  $("savingsBox").innerHTML=`
+    <div class="lrow"><span>Saved up so far</span><b class="num">${money(saved)}</b></div>
+    <div class="lrow"><span>${left<0?"Taken from savings this month":"Added to savings at the end of the month"}</span><b class="num${left<0?" neg":" plus"}">${left<0?"−":"+"}${money(Math.abs(left))}</b><small>From "${left<0?"Short by":"Left after expenses"}" above</small></div>
+    <div class="lrow left total"><span>Expected savings</span><b class="num${goal<0?" neg":""}">${goal<0?"−":""}${money(Math.abs(goal))}</b></div>`;
+}
+// The saved amount carries forward: a month uses the latest amount saved on or before it.
+function savingsFor(mk){const ks=Object.keys(state.savings||{}).filter(k=>k<=mk).sort();return ks.length?(+state.savings[ks[ks.length-1]]||0):0}
+$("editSavings").onclick=()=>{const f=$("savingsEditor");
+  if(!f.hidden){f.hidden=true;$("editSavings").textContent="Edit savings";return}
+  const v=savingsFor(keyOf(view));$("savingsInput").value=v?v:"";$("savingsMsg").textContent="";
+  f.hidden=false;$("editSavings").textContent="Close";$("savingsInput").focus()};
+$("savingsCancel").onclick=()=>{$("savingsEditor").hidden=true;$("editSavings").textContent="Edit savings"};
+$("savingsEditor").addEventListener("submit",async e=>{
+  e.preventDefault();const raw=$("savingsInput").value.trim(), v=raw===""?0:parseAmt(raw), m=$("savingsMsg");
+  if(!(v>=0)){m.textContent="Enter the amount as a number, like 2500.";return}
+  if(!canEdit){m.textContent="Not connected yet, so this can't be saved.";return}
+  try{await saving(budgetRef.child("savings/"+keyOf(view)).set(v));$("savingsEditor").hidden=true;$("editSavings").textContent="Edit savings"}
+  catch{m.textContent=saveErr}
+});
+function openIncome(open){
+  if(open&&yearOpen)openYear(false);
+  incomeOpen=open;document.body.classList.toggle("incomemode",open);$("incomePage").hidden=!open;
+  $("incomeBtn").setAttribute("aria-pressed",String(open));$("incomeBtn").setAttribute("aria-label",open?"Close the income page":"Open the income page");
+  if(!open)editorClosers.forEach(f=>f());
+  renderIncome();window.scrollTo(0,0);
+}
+$("incomeBtn").onclick=()=>openIncome(!incomeOpen);
+$("iBack").onclick=()=>openIncome(false);
+$("iPrev").onclick=()=>{view.setMonth(view.getMonth()-1);editorClosers.forEach(f=>f());render()};
+$("iNext").onclick=()=>{view.setMonth(view.getMonth()+1);editorClosers.forEach(f=>f());render()};
+
+
+// ---- Arrow buttons that fold sections open and closed (remembered on this phone) ----
+const CHEV='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function foldify(anchorId,key,label){
+  const anchor=$(anchorId); if(!anchor)return;
+  const card=anchor.closest(".card, .hero"); if(!card||card.dataset.folded)return;
+  card.dataset.folded="1";
+  let head=card.querySelector(":scope > .cardhead")||card.firstElementChild;
+  if(!head.classList.contains("cardhead")){const row=document.createElement("div");row.className="cardhead foldrow";card.insertBefore(row,head);row.appendChild(head);head=row}
+  // Title with its count underneath, so the title, Edit and the arrow fit on one line on a phone.
+  const h3=head.querySelector(":scope > h3"), sp=h3&&h3.nextElementSibling;
+  if(sp&&sp.tagName==="SPAN"){const st=document.createElement("div");st.className="titlestack";head.insertBefore(st,h3);st.appendChild(h3);st.appendChild(sp)}
+  head.classList.add("hasfold");
+  const btn=document.createElement("button");btn.type="button";btn.className="foldbtn";btn.innerHTML=CHEV;head.appendChild(btn);
+  const body=document.createElement("div");body.className="collbody";const inner=document.createElement("div");inner.className="collinner";body.appendChild(inner);
+  while(head.nextSibling)inner.appendChild(head.nextSibling);
+  card.appendChild(body);
+  function set(open,save){btn.setAttribute("aria-expanded",String(open));body.classList.toggle("open",open);
+    btn.setAttribute("aria-label",(open?"Hide ":"Show ")+label);
+    if(save)try{localStorage.setItem("pb2_fold_"+key,open?"1":"0")}catch{}}
+  let start=true;try{const v=localStorage.getItem("pb2_fold_"+key);if(v!==null)start=v==="1"}catch{}
+  set(start,false);
+  btn.onclick=()=>set(btn.getAttribute("aria-expanded")!=="true",true);
+  // Opening an editor inside a folded section opens the section too.
+  card.querySelectorAll(".editbtn").forEach(b=>b.addEventListener("click",()=>{if(btn.getAttribute("aria-expanded")!=="true")set(true,true)}));
+}
+foldify("left","left","the month summary");
+foldify("budgets","budgets","spending budgets");
+foldify("list","spending","spending this month");
+foldify("bills","bills","monthly bills");
+foldify("deposits","deposits","deposits");
+foldify("incomeSummary","incomeSummary","this month's income summary");
+foldify("savingsBox","savings","savings");
+foldify("chartBox","chart","the graph");
+foldify("facts","facts","year details");
+foldify("mtable","mtable","month by month");
+
+// ---- Swipe pager ----
+const pager=$("pager"), panes=[$("pane-0"),$("pane-1")];
+let page=0;
+function fitPager(){pager.style.height=panes[page].offsetHeight+"px"}
+function setPage(p){page=p;document.querySelectorAll(".tab[data-page]").forEach(t=>t.setAttribute("aria-selected",String(+t.dataset.page===p)));fitPager()}
+document.querySelector(".tabs").addEventListener("click",e=>{const t=e.target.closest(".tab");if(!t)return;
+  const p=+t.dataset.page;setPage(p);pager.scrollTo({left:panes[p].offsetLeft-panes[0].offsetLeft,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})});
+let st;pager.addEventListener("scroll",()=>{clearTimeout(st);st=setTimeout(()=>{const p=Math.round(pager.scrollLeft/pager.clientWidth);if(p!==page)setPage(p)},60)},{passive:true});
+try{new ResizeObserver(fitPager).observe(panes[0]);new ResizeObserver(fitPager).observe(panes[1])}catch{}
+addEventListener("resize",()=>{pager.scrollLeft=panes[page].offsetLeft-panes[0].offsetLeft;fitPager()});
+
+// ---- Sharing (owner only) ----
+function viewerLink(){return location.origin+location.pathname+"?view="+budgetId}
+function showShare(){
+  const link=viewerLink();
+  $("shareLink").textContent=link;
+  $("shareCode").textContent="Budget code "+budgetCode()+" · viewers see this same code";
+  $("qr").innerHTML="";
+  try{new QRCode($("qr"),{text:link,width:180,height:180,colorDark:"#15212c",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M})}catch{$("qr").textContent="QR code unavailable"}
+}
+$("shareBtn").onclick=async()=>{
+  const link=viewerLink(), text="Here's my live budget (view only): "+link;
+  if(window.Android&&Android.share){Android.share(text);return}
+  try{if(navigator.share){await navigator.share({title:"My budget",text,url:link});return}}catch{return}
+  try{await navigator.clipboard.writeText(link);$("shareMsg").textContent="Link copied."}catch{$("shareMsg").textContent="Press and hold the link above to copy it."}
+};
+
+// ---- iPhone: suggest adding to the Home Screen ----
+// Safari can clear a website's saved data after a week without visits; Home Screen apps are kept.
+(function(){
+  const iOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const standalone=navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+  if(MODE!=="owner"||!iOS||standalone)return;
+  let snooze=0;try{snooze=+localStorage.getItem("pb2_homehint")||0}catch{}
+  if(Date.now()<snooze)return;
+  const d=document.createElement("div");d.className="homehint";
+  d.innerHTML='<b>Keep your budget safe on this iPhone</b>Tap the Share button, then <b style="display:inline">Add to Home Screen</b>, and open Pocket Budget from there. Safari can clear websites you haven\'t visited in a while, but Home Screen apps are kept.<div class="row"><button class="later">Later</button><button class="ok">Got it</button></div>';
+  d.querySelector(".later").onclick=()=>{try{localStorage.setItem("pb2_homehint",String(Date.now()+864e5))}catch{}d.remove()};
+  d.querySelector(".ok").onclick=()=>{try{localStorage.setItem("pb2_homehint",String(Date.now()+30*864e5))}catch{}d.remove()};
+  document.body.appendChild(d);
+})();
+
+// ---- Start ----
+function subscribe(id){
+  budgetRef=firebase.database().ref("budgets/"+id);
+  const timer=setTimeout(()=>{if(!ready){setLive(false,"Connecting");notice("Can't reach the budget yet. It will load once you're online.")}},10000);
+  budgetRef.on("value",snap=>{clearTimeout(timer);applySnap(snap)},err=>{clearTimeout(timer);setLive(false,"Offline");notice(MODE==="viewer"?"This budget can't be viewed. The link may be wrong.":"Lost connection to your budget. Restart the app.")});
+  firebase.database().ref(".info/connected").on("value",s=>setLive(!!s.val(),s.val()?"Live":"Offline"));
+}
+let lastUpdate=0;
+const budgetCode=()=>budgetId?budgetId.slice(-4).toUpperCase():"";
+function showUpdated(){lastUpdate=Date.now();const el=$("updatedAt");if(MODE!=="viewer")return;
+  el.hidden=false;el.textContent="Updated "+new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})+" · Budget code "+budgetCode()}
+function applySnap(snap){
+    showUpdated();
+    if(!snap.exists()){
+      ready=true;
+      if(MODE==="viewer"){notice("This budget link doesn't work. Ask the owner to send their QR code again.");setLive(false,"Not found")}
+      render();return}
+    const d=snap.val()||{};
+    state.config=d.config?{bills:asList(d.config.bills),cats:asList(d.config.cats).length?asList(d.config.cats):DEFAULT_CATS}:null;
+    state.billMonths=d.billMonths||{};state.billPlans=d.billPlans||{};
+    state.incomeMonths=d.incomeMonths||{};state.incomePlans=d.incomePlans||{};
+    state.savings=d.savings||{};
+    state.paid=d.paid||{};
+    state.expenses=Object.entries(d.expenses||{}).map(([id,v])=>({id,...v}));
+    ready=true;notice("");renderChips();render();
+}
+
+// ---- View-only: refresh button, and refresh when the page comes back on screen ----
+let refreshing=false;
+async function refreshNow(soft){
+  if(refreshing||!budgetRef)return;refreshing=true;$("refreshBtn").classList.add("spin");
+  if(!soft){setTimeout(()=>location.reload(),250);return}   // button: reload everything fresh
+  try{reconnect();
+    const snap=await Promise.race([budgetRef.get(),new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),8000))]);
+    applySnap(snap);
+  }catch{location.reload();return}
+  finally{refreshing=false;$("refreshBtn").classList.remove("spin")}
+}
+$("refreshBtn").onclick=()=>refreshNow(false);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&budgetRef){reconnect();if(MODE==="viewer"&&Date.now()-lastUpdate>5000)refreshNow(true)}});
+addEventListener("online",()=>{if(budgetRef)reconnect()});
+
+async function startOwner(){
+  makeEditor("bills");makeEditor("cats");makeEditor("income");
+  const auth=firebase.auth();
+  await new Promise(r=>{const u=auth.onAuthStateChanged(()=>{u();r()})});
+  if(!auth.currentUser){try{await auth.signInAnonymously()}catch{notice("Couldn't connect. Check your internet connection and restart the app.");return}}
+  const uid=auth.currentUser.uid;
+  budgetId=load("pb2_budget_id");
+  if(!budgetId){
+    budgetId=randomBudgetId();
+    try{await firebase.database().ref("budgets/"+budgetId).set({owner:uid,created:Date.now(),config:{bills:DEFAULT_BILLS,cats:DEFAULT_CATS}})}
+    catch{notice("Couldn't create your budget. Check your internet connection and restart the app.");return}
+    store("pb2_budget_id",budgetId);
+  }
+  canEdit=true;showShare();subscribe(budgetId);render();
+}
+
+renderChips();render();fitPager();
+if(MODE!=="landing"&&!(window.firebase&&firebase.apps&&firebase.apps.length)){notice("This app isn't connected to its database yet. Add your Firebase settings to config.js.");setLive(false,"Not set up")}
+else if(MODE==="owner") startOwner();
+else if(MODE==="viewer"){budgetId=VIEW_ID;subscribe(VIEW_ID)}
+
+</script>
+</body>
+</html>

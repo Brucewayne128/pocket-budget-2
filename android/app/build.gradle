@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.pocketbudget.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.pocketbudget.app2"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // One fixed signing key, so each new APK installs as an update and your budget is kept.
+    signingConfigs {
+        pocket {
+            storeFile file('pocketbudget.jks')
+            storePassword 'pocketbudget'
+            keyAlias 'pocketbudget'
+            keyPassword 'pocketbudget'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.pocket
+        }
+        debug {
+            signingConfig signingConfigs.pocket
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

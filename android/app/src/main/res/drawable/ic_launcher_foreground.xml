@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A simple wallet with a coin, drawn inside the 66dp safe zone of a 108dp adaptive icon -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M32,40 h40 a6,6 0 0 1 6,6 v22 a6,6 0 0 1 -6,6 h-40 a6,6 0 0 1 -6,-6 v-22 a6,6 0 0 1 6,-6 z" />
+    <path android:fillColor="#CFE3F2"
+        android:pathData="M60,50 h18 v14 h-18 a7,7 0 0 1 0,-14 z" />
+    <path android:fillColor="#1F5F8B"
+        android:pathData="M61,57 m-3,0 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0" />
+    <path android:fillColor="#F2B640"
+        android:pathData="M44,34 m-8,0 a8,8 0 1 0 16,0 a8,8 0 1 0 -16,0" />
+</vector>

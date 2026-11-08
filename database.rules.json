@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "budgets": {
+      "$budgetId": {
+        ".read": true,
+        ".write": "auth != null && ((!data.exists() && newData.child('owner').val() === auth.uid) || data.child('owner').val() === auth.uid)",
+        "owner": {
+          ".validate": "newData.val() === auth.uid"
+        }
+      }
+    }
+  }
+}
