@@ -21,6 +21,13 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+
 /**
  * Pocket Budget: shows the budget web app full screen.
  * The app marks itself with "PocketBudgetApp" in its user agent, which is what lets
@@ -33,6 +40,11 @@ public class MainActivity extends Activity {
     private int insetTop = 0, insetBottom = 0;
     private boolean darkBars = false;
     private boolean navHidden = false;
+
+    // Save page: Export writes a file where you choose, Import reads one you pick.
+    private static final int REQ_EXPORT = 41, REQ_IMPORT = 42;
+    private static final int MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+    private String pendingExport;
 
     private static final String OFFLINE_PAGE =
         "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>" +
@@ -199,8 +211,78 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().flush();
     }
 
+    /** Answers from Android's "Save to" and file-picker screens. */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Uri uri = (resultCode == RESULT_OK && data != null) ? data.getData() : null;
+        if (requestCode == REQ_EXPORT) {
+            String text = pendingExport;
+            pendingExport = null;
+            String result = "cancel";
+            if (uri != null && text != null) {
+                try (OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+                    out.write(text.getBytes(StandardCharsets.UTF_8));
+                    result = "ok";
+                } catch (Exception e) {
+                    result = "error";
+                }
+            }
+            web.evaluateJavascript("window.backupSaved&&window.backupSaved('" + result + "')", null);
+        } else if (requestCode == REQ_IMPORT) {
+            String text = null;
+            if (uri != null) {
+                try (InputStream in = getContentResolver().openInputStream(uri)) {
+                    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                    byte[] chunk = new byte[16384];
+                    int n;
+                    while ((n = in.read(chunk)) > 0) {
+                        buf.write(chunk, 0, n);
+                        if (buf.size() > MAX_IMPORT_BYTES) throw new Exception("too big");
+                    }
+                    text = buf.toString("UTF-8");
+                } catch (Exception e) {
+                    text = "";  // the page reports it isn't a save file
+                }
+            }
+            String arg = text == null ? "null" : JSONObject.quote(text);
+            web.evaluateJavascript("window.backupPicked&&window.backupPicked(" + arg + ")", null);
+        }
+    }
+
     /** Functions the web page can call as window.Android.* */
     private class Bridge {
+        /** Export: opens Android's "Save to" screen so you choose the folder and file name. */
+        @JavascriptInterface
+        public void saveFile(String name, String text) {
+            runOnUiThread(() -> {
+                pendingExport = text;
+                Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("application/json");
+                i.putExtra(Intent.EXTRA_TITLE, name);
+                try {
+                    startActivityForResult(i, REQ_EXPORT);
+                } catch (Exception e) {
+                    pendingExport = null;
+                    web.evaluateJavascript("window.backupSaved&&window.backupSaved('error')", null);
+                }
+            });
+        }
+
+        /** Import: opens the file picker; the file's text goes back to window.backupPicked. */
+        @JavascriptInterface
+        public void openFile() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("*/*");  // some file apps don't label .json files, so don't filter by type
+                try {
+                    startActivityForResult(i, REQ_IMPORT);
+                } catch (Exception ignored) { }
+            });
+        }
+
         @JavascriptInterface
         public void share(String text) {
             Intent send = new Intent(Intent.ACTION_SEND);

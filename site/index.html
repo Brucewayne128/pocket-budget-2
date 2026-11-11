@@ -251,6 +251,15 @@ header h1{font-size:clamp(1.05rem,5.2vw,1.35rem);white-space:nowrap;min-width:0;
 
 .incomebtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 body.incomemode .wrap>*:not(header):not(#incomePage):not(.viewbanner):not(.notice){display:none !important}
+.savebtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+body.savemode .wrap>*:not(header):not(#savePage):not(.viewbanner):not(.notice){display:none !important}
+body[data-mode="viewer"] .savebtn,body[data-mode="landing"] .savebtn{display:none}
+#savePage h2{font-family:var(--display);font-weight:600;font-size:1.25rem;margin:4px 0 0;text-align:center}
+#savePage .primary{width:100%}
+.importconfirm{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.importinfo{display:flex;flex-direction:column;gap:3px}
+.importinfo span{color:var(--muted);font-size:.9rem}
+#saveMsg{text-align:center}
 .bill.dep{cursor:default}
 .depicon{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:.85rem;background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
 .bill .cd.got{color:var(--good)}
@@ -298,6 +307,9 @@ body[data-mode="viewer"] .hdr-right .themebtn{width:34px;height:34px}
   <header>
     <h1>Pocket Budget</h1>
     <div class="hdr-right">
+      <button type="button" class="themebtn savebtn" id="saveBtn" aria-label="Open the save page" aria-pressed="false" title="Save">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 3.5h11.2L20.5 7.8V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7.5 3.5v5h8v-5M7.5 20.5v-6.5h9v6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
       <button type="button" class="themebtn incomebtn" id="incomeBtn" aria-label="Open the income page" aria-pressed="false" title="Income">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v18M16.5 7.5c-.8-1.3-2.4-2-4.5-2-2.6 0-4.3 1.3-4.3 3.1 0 4.4 9 2.4 9 6.9 0 1.9-1.9 3.2-4.7 3.2-2.3 0-4-.8-4.8-2.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -457,6 +469,27 @@ body[data-mode="viewer"] .hdr-right .themebtn{width:34px;height:34px}
       <div class="ledger" id="savingsBox"></div>
     </section>
     <button type="button" class="ghost backbtn" id="iBack">← Back to bills and spending</button>
+  </section>
+
+  <section id="savePage" class="yearpage" hidden>
+    <h2>Save your progress</h2>
+    <section class="card">
+      <h3>Export</h3>
+      <p class="sub">Makes a save file with your whole budget: bills, categories, spending, deposits and savings. You choose where it goes, like Google Drive or iCloud Drive, so you can get everything back if you lose your phone.</p>
+      <button class="primary" id="exportBtn" type="button">Export save file</button>
+    </section>
+    <section class="card">
+      <h3>Import</h3>
+      <p class="sub">Pick a save file you made with Export to load it into this app. This replaces what's in the app now.</p>
+      <button class="primary" id="importBtn" type="button">Import save file</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <div class="importconfirm" id="importConfirm" hidden>
+        <div class="importinfo" id="importInfo"></div>
+        <div class="eactions"><button class="primary" id="importGo" type="button">Load this save</button><button class="ghost" id="importCancel" type="button">Cancel</button></div>
+      </div>
+    </section>
+    <p class="msg" id="saveMsg" aria-live="polite"></p>
+    <button type="button" class="ghost backbtn" id="sBack">← Back to bills and spending</button>
   </section>
 
   <section id="yearPage" class="yearpage" hidden>
@@ -917,6 +950,7 @@ function renderYear(){
 }
 function openYear(open){
   if(open&&typeof incomeOpen!=="undefined"&&incomeOpen)openIncome(false);
+  if(open&&typeof saveOpen!=="undefined"&&saveOpen)openSave(false);
   yearOpen=open;document.body.classList.toggle("yearmode",open);$("yearPage").hidden=!open;
   $("graphBtn").setAttribute("aria-pressed",String(open));$("graphBtn").setAttribute("aria-label",open?"Close the year graph":"Open the year graph");
   if(open){yearView=view.getFullYear();renderYear()}
@@ -1016,6 +1050,7 @@ $("savingsEditor").addEventListener("submit",async e=>{
 });
 function openIncome(open){
   if(open&&yearOpen)openYear(false);
+  if(open&&typeof saveOpen!=="undefined"&&saveOpen)openSave(false);
   incomeOpen=open;document.body.classList.toggle("incomemode",open);$("incomePage").hidden=!open;
   $("incomeBtn").setAttribute("aria-pressed",String(open));$("incomeBtn").setAttribute("aria-label",open?"Close the income page":"Open the income page");
   if(!open)editorClosers.forEach(f=>f());
@@ -1025,6 +1060,85 @@ $("incomeBtn").onclick=()=>openIncome(!incomeOpen);
 $("iBack").onclick=()=>openIncome(false);
 $("iPrev").onclick=()=>{view.setMonth(view.getMonth()-1);editorClosers.forEach(f=>f());render()};
 $("iNext").onclick=()=>{view.setMonth(view.getMonth()+1);editorClosers.forEach(f=>f());render()};
+
+
+// ---- Save page: back up the whole budget to a file, and load it back ----
+// The save file holds everything under this budget in the database (not the owner, which is
+// tied to the phone). Importing writes it into THIS phone's budget, so it also works on a
+// new phone, which gets a new budget of its own.
+const BACKUP_FORMAT="pocket-budget-backup";
+let saveOpen=false, lastRaw=null, pendingImport=null;
+function openSave(open){
+  if(open&&incomeOpen)openIncome(false);
+  if(open&&typeof yearOpen!=="undefined"&&yearOpen)openYear(false);
+  saveOpen=open;document.body.classList.toggle("savemode",open);$("savePage").hidden=!open;
+  $("saveBtn").setAttribute("aria-pressed",String(open));$("saveBtn").setAttribute("aria-label",open?"Close the save page":"Open the save page");
+  if(open)saveMsg("");else cancelImport();
+  window.scrollTo(0,0);
+}
+$("saveBtn").onclick=()=>openSave(!saveOpen);
+$("sBack").onclick=()=>openSave(false);
+function saveMsg(t,err){const m=$("saveMsg");m.className="msg"+(err?" err":"");m.textContent=t||""}
+
+$("exportBtn").onclick=async()=>{
+  if(!ready||!lastRaw){saveMsg("Your budget hasn't loaded yet. Try again in a moment.",true);return}
+  const data=JSON.parse(JSON.stringify(lastRaw));delete data.owner;
+  const text=JSON.stringify({format:BACKUP_FORMAT,version:1,app:"Pocket Budget 2",saved:new Date().toISOString(),budget:data});
+  const name="pocket-budget-save-"+todayISO()+".json";
+  // In the Android app: Android's own "Save to" screen, where you pick the folder.
+  if(window.Android&&Android.saveFile){saveMsg("Choose where to keep your save file.");Android.saveFile(name,text);return}
+  if(IN_APP){saveMsg("Update the Pocket Budget app to use Export.",true);return}
+  const file=new File([text],name,{type:"application/json"});
+  // iPhone: the share sheet's "Save to Files" lets you pick the folder.
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){
+    saveMsg("Tap \"Save to Files\" and choose a folder.");
+    await navigator.share({files:[file]});saveMsg("Saved. Keep the file somewhere safe, like iCloud Drive.");return}}
+  catch(e){if(e&&e.name==="AbortError"){saveMsg("");return}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+  saveMsg("Your save file was downloaded as "+name+".");
+};
+// Called by the Android app when the "Save to" screen closes: "ok", "cancel" or "error".
+window.backupSaved=r=>r==="ok"?saveMsg("Saved. Keep the file somewhere safe, like Google Drive."):r==="error"?saveMsg("Couldn't save the file there. Try a different folder.",true):saveMsg("");
+
+$("importBtn").onclick=()=>{
+  saveMsg("");cancelImport();
+  if(!canEdit){saveMsg("Not connected yet. Try again once your budget has loaded.",true);return}
+  if(window.Android&&Android.openFile){Android.openFile();return}
+  if(IN_APP){saveMsg("Update the Pocket Budget app to use Import.",true);return}
+  $("importFile").value="";$("importFile").click();
+};
+$("importFile").onchange=async()=>{
+  const f=$("importFile").files[0];if(!f)return;
+  if(f.size>20e6){saveMsg("That file is too big to be a Pocket Budget save file.",true);return}
+  try{backupPicked(await f.text())}catch{saveMsg("Couldn't read that file.",true)}
+};
+// Called with the picked file's text (by the Android app, or by the file input above). null = cancelled.
+window.backupPicked=text=>{
+  if(text==null)return;
+  let d=null;try{d=JSON.parse(text)}catch{}
+  if(!d||d.format!==BACKUP_FORMAT||!d.budget||typeof d.budget!=="object"||Array.isArray(d.budget)){
+    saveMsg("That isn't a Pocket Budget save file. Pick the file you made with Export.",true);return}
+  pendingImport=d;
+  const b=d.budget, nExp=Object.keys(b.expenses||{}).length, nBills=asList(b.config&&b.config.bills).length;
+  const t=new Date(d.saved), when=isNaN(t)?"an unknown date":t.toLocaleString("en-US",{month:"long",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
+  $("importInfo").innerHTML=`<b>Save from ${esc(when)}</b><span>${nBills} bill${nBills===1?"":"s"} · ${nExp} expense${nExp===1?"":"s"}</span><span>Loading it replaces everything in Pocket Budget on this phone.</span>`;
+  $("importConfirm").hidden=false;saveMsg("");
+};
+function cancelImport(){pendingImport=null;$("importConfirm").hidden=true}
+$("importCancel").onclick=()=>{cancelImport();saveMsg("")};
+$("importGo").onclick=async()=>{
+  if(!pendingImport)return;
+  const user=firebase.auth().currentUser;
+  if(!canEdit||!budgetRef||!user){saveMsg("Not connected yet. Try again once your budget has loaded.",true);return}
+  const data=JSON.parse(JSON.stringify(pendingImport.budget));
+  data.owner=user.uid;data.restored=Date.now();   // this phone owns the budget now
+  if(!data.config)data.config={bills:DEFAULT_BILLS,cats:DEFAULT_CATS};
+  $("importGo").disabled=true;saveMsg("Loading your save…");
+  try{await saving(budgetRef.set(data));cancelImport();saveMsg("Your budget is back! Everything from the save file is loaded.")}
+  catch{saveMsg("Couldn't load the save. Check your internet connection and try again.",true)}
+  $("importGo").disabled=false;
+};
 
 
 // ---- Arrow buttons that fold sections open and closed (remembered on this phone) ----
@@ -1118,6 +1232,7 @@ function showUpdated(){lastUpdate=Date.now();const el=$("updatedAt");if(MODE!=="
   el.hidden=false;el.textContent="Updated "+new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})+" · Budget code "+budgetCode()}
 function applySnap(snap){
     showUpdated();
+    lastRaw=snap.exists()?snap.val():null;
     if(!snap.exists()){
       ready=true;
       if(MODE==="viewer"){notice("This budget link doesn't work. Ask the owner to send their QR code again.");setLive(false,"Not found")}
