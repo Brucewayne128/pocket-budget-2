@@ -1,7 +1,7 @@
 // Your Firebase project settings. These are safe to be public:
 // the database security rules are what protect each budget.
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAkMR2NFrz8sQsuqFFdHEFtS9VFbGw4m9o",
+  apiKey: "AIzaSyAgXQu-2SkM-4Was--B_MN2NvqItj-CuGQ",
   authDomain: "pocket-budget-28077.firebaseapp.com",
   databaseURL: "https://pocket-budget-28077-default-rtdb.firebaseio.com",
   projectId: "pocket-budget-28077",
