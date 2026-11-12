@@ -1269,6 +1269,22 @@ async function startOwner(){
   if(!auth.currentUser){try{await auth.signInAnonymously()}catch{notice("Couldn't connect. Check your internet connection and restart the app.");return}}
   const uid=auth.currentUser.uid;
   budgetId=load("pb2_budget_id");
+  if(budgetId){
+    // This phone may have signed in again as a new user (for example after the Firebase key changed).
+    // The old budget then belongs to the old sign-in and can't be changed, so copy it into a new one this phone owns.
+    try{
+      const snap=await firebase.database().ref("budgets/"+budgetId).get();
+      const old=snap.val();
+      if(old&&old.owner&&old.owner!==uid){
+        const fresh=randomBudgetId();
+        const copy=JSON.parse(JSON.stringify(old));copy.owner=uid;copy.movedFrom=budgetId;copy.moved=Date.now();
+        await firebase.database().ref("budgets/"+fresh).set(copy);
+        budgetId=fresh;store("pb2_budget_id",fresh);
+      }else if(!old){
+        await firebase.database().ref("budgets/"+budgetId).set({owner:uid,created:Date.now(),config:{bills:DEFAULT_BILLS,cats:DEFAULT_CATS}});
+      }
+    }catch{notice("Couldn't open your budget. Check your internet connection and restart the app.");return}
+  }
   if(!budgetId){
     budgetId=randomBudgetId();
     try{await firebase.database().ref("budgets/"+budgetId).set({owner:uid,created:Date.now(),config:{bills:DEFAULT_BILLS,cats:DEFAULT_CATS}})}
