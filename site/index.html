@@ -128,6 +128,15 @@ input[type=text],input[type=date],input[inputmode]{width:100%;padding:12px 14px;
 .del{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:8px;font-size:.85rem}
 .del.confirm{color:var(--bad);font-weight:700;background:color-mix(in srgb,var(--bad) 10%,transparent)}
 .empty{color:var(--muted);font-size:.95rem;padding:6px 0}
+.catfilter{display:flex;flex-wrap:wrap;gap:8px 14px;margin:12px 0 4px}
+.catfilter label{display:inline-flex;align-items:center;gap:7px;font-size:.9rem;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;padding:4px 0}
+.catfilter input{position:absolute;opacity:0;width:1px;height:1px}
+.catfilter .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--c);display:grid;place-items:center;transition:background .15s}
+.catfilter .box svg{width:14px;height:14px;opacity:0;transition:opacity .15s}
+.catfilter input:checked+.box{background:var(--c)}
+.catfilter input:checked+.box svg{opacity:1}
+.catfilter input:checked~span:last-child{color:var(--ink)}
+.catfilter input:focus-visible+.box{outline:2px solid var(--accent);outline-offset:2px}
 .notice{background:color-mix(in srgb,var(--warn) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:var(--r);padding:14px 16px;font-size:.95rem}
 
 .editbtn{margin-left:auto;background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:.85rem;cursor:pointer;color:var(--accent)}
@@ -414,6 +423,7 @@ body[data-mode="viewer"] .hdr-right .themebtn{width:34px;height:34px}
 
   <section class="card">
     <h3>Spending this month</h3>
+    <div class="catfilter" id="catFilter" role="group" aria-label="Show expenses from these categories"></div>
     <div id="list"><div class="empty">Loading your expenses…</div></div>
   </section>
   <p class="hint">← Swipe right for bills</p>
@@ -586,6 +596,16 @@ function incomeFor(mk){
 }
 const cats=()=>{const c=state.config?.cats||DEFAULT_CATS;return c.some(x=>x.id==="other")?c:[...c,{id:"other",name:"Other",limit:0,color:"other"}]};
 const catColor=c=>`var(--${c.color||"other"})`;
+let hiddenCats=new Set();try{hiddenCats=new Set(JSON.parse(load("pb2_hidden_cats")||"[]"))}catch{}
+function renderCatFilter(){
+  const el=$("catFilter");if(!el)return;
+  el.innerHTML=cats().map(c=>`<label><input type="checkbox" data-filter="${esc(c.id)}" ${hiddenCats.has(c.id)?"":"checked"}><span class="box" style="--c:${catColor(c)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#101418" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>${esc(c.name)}</span></label>`).join("");
+}
+document.addEventListener("change",e=>{
+  const id=e.target&&e.target.dataset&&e.target.dataset.filter;if(id===undefined)return;
+  if(e.target.checked)hiddenCats.delete(id);else hiddenCats.add(id);
+  store("pb2_hidden_cats",JSON.stringify([...hiddenCats]));render();
+});
 const catOf=id=>cats().find(c=>c.id===id)||cats().find(c=>c.id==="other");
 
 function renderChips(){
@@ -677,9 +697,13 @@ function render(){
       <div class="track"><span class="${over?"over":""}" style="width:${pct(v,lim)}%;background:${catColor(c)}"></span></div>
       <span class="note num${over?" over":""}">${over?money(-rem)+" over budget":money(rem)+" left"}</span></div>`}).join("");
 
+  renderCatFilter();
   if(!items.length){$("list").innerHTML=`<div class="empty">${ready?"No expenses in "+view.toLocaleDateString("en-US",{month:"long"})+" yet."+(canEdit?" Add one above.":""):"Loading…"}</div>`;return}
+  const shown=items.filter(e=>!hiddenCats.has(catOf(e.category).id));
+  if(cats().every(c=>hiddenCats.has(c.id))){$("list").innerHTML=`<div class="empty">Check a box above to see those expenses.</div>`;return}
+  if(!shown.length){$("list").innerHTML=`<div class="empty">No expenses in the checked categories this month.</div>`;return}
   let html="",lastDay="";
-  for(const e of items){
+  for(const e of shown){
     if(e.date!==lastDay){lastDay=e.date;const d=new Date(e.date+"T12:00");
       html+=(html?"</div>":"")+`<div class="day">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</div><div class="items">`}
     const c=catOf(e.category);
